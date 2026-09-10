@@ -80,8 +80,26 @@ export default async function ProjectPage({
         </div>
       )}
 
+      {project.features && project.features.length > 0 && (
+        <section className="space-y-6 border-t border-neutral-200 pt-8 dark:border-neutral-800">
+          <h2 className="text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+            Features
+          </h2>
+          <dl className="space-y-5">
+            {project.features.map((feature) => (
+              <div key={feature.name} className="space-y-1">
+                <dt className="font-medium">{feature.name}</dt>
+                <dd className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  {feature.detail}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        </section>
+      )}
+
       {project.links.length > 0 && (
-        <div className="border-t border-neutral-200 pt-8 dark:border-neutral-800">
+        <section className="border-t border-neutral-200 pt-8 dark:border-neutral-800">
           <h2 className="text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
             Links
           </h2>
@@ -99,7 +117,7 @@ export default async function ProjectPage({
               </li>
             ))}
           </ul>
-        </div>
+        </section>
       )}
     </article>
   );
