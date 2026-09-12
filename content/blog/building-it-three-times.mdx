@@ -1,0 +1,30 @@
+---
+title: "Building the same app three times"
+date: "2025-01-15"
+summary: "What I learned rebuilding CircleNet in vanilla JS, Next.js and React Native against one backend."
+tags: ["CircleNet", "Next.js", "React Native"]
+---
+
+Most side projects get abandoned once they work. CircleNet is the one I kept rebuilding.
+
+## Why three times
+
+I wrote the first version in plain JavaScript, HTML and CSS. No framework, no build step. I wanted to know what a feed actually does before letting Next.js hide it from me — how pagination works, when to refetch, what happens when a post is deleted while you're scrolling.
+
+Once that worked, I rebuilt it in Next.js. Then in React Native, because I wanted it on my phone.
+
+## What stayed the same
+
+The backend. Express and MySQL, unchanged across all three clients.
+
+That constraint turned out to be the most valuable part of the project. When three different frontends need the same data, you can't let any one of them invent its own shape. The API has to be honest about what it returns, because there's no single client to tailor it to.
+
+## The hard parts
+
+**Whispers** — anonymous messages — are a security problem wearing a UI costume. If the sender's ID is anywhere in the API response, the feature is broken no matter what the screen shows. Getting that right meant stripping identity on the server, and making sure moderation still worked on content with no author attached.
+
+**Live** meant real-time video, which is a completely different problem from anything else in the app. Nothing in the CRUD parts of CircleNet prepared me for it.
+
+## What I'd do differently
+
+I'd write the API contract down before the second client. I spent time reverse-engineering decisions I'd made weeks earlier, because the only record of them was the code.
