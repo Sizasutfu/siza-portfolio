@@ -1,0 +1,46 @@
+---
+title: "What eight thousand lines taught me about building alone"
+date: "2026-09-12"
+summary: "CircleNet started as one file. By the time it stopped being one file, I understood why people don't build social platforms solo."
+tags: ["CircleNet", "Node.js", "Product"]
+---
+
+For a long time, CircleNet ran on a single file called `main.js`. It grew the way these things grow — one route here, one handler there, a fix wedged in between two unrelated functions because that's where there was room. By the time I stopped to look at it properly, it was past eight thousand lines.
+
+Nobody plans to build a monolith. You just don't notice you're doing it until you're the one who has to scroll through it.
+
+I've since pulled it apart into feature-specific files. That was less a technical decision and more a survival one — I was losing time just finding the code I needed to change.
+
+## The bugs that only show up when things are live
+
+Most of the code in CircleNet is easy to reason about. You write a function, you call it, it does what it says. Live streaming is not that.
+
+I spent a real stretch of time auditing `live.js`, `wsServer.js`, `liveController.js`, and `LiveModel.js`, and fixed something like a dozen bugs across them — race conditions, state that went stale the moment two things happened close together, duplicate sessions that shouldn't have been possible, follower notifications that didn't always make it back to the feed.
+
+None of these bugs were hard to understand once I found them. They were hard to *find*, because they only happened when timing lined up a certain way — which meant they mostly happened in front of real users, not in front of me.
+
+## The seams are where it breaks
+
+Almost nothing that broke, broke inside one file. It broke between files.
+
+- MySQL stores booleans as `tinyint`. JavaScript doesn't think in `tinyint`. That mismatch quietly broke `MobileUserCard` and `DesktopUserRow` in the admin panel until I went looking for why a value that was clearly true kept rendering as false.
+- `GroupsContext.jsx` had a `userId` query param that wasn't being passed through correctly, so group membership displayed wrong — right data, wrong wiring.
+- A `PUT /:id` route for editing posts was quietly dropping image and video fields, because it was missing the `multer` middleware the create route had. Same feature, two routes, one of them incomplete.
+
+None of these were algorithm problems. They were seam problems — the places where the frontend's assumptions and the backend's reality don't quite agree, and nothing tells you until a user hits it.
+
+## Moving the blog didn't feel like a blog problem
+
+At some point I moved the blog from `blog.circlenet.social` to `circlenet.social/articles`, mostly for SEO consolidation. I underestimated how much that would touch.
+
+The Next.js side alone brought hydration mismatches, a `generateMetadata` setup that needed rebuilding, JSON-LD and sitemap and robots.txt all needing to point at the new structure, and an `AuthProvider` serialization error that had nothing to do with the move but picked that moment to surface. OpenGraph image generation broke too — route conflicts, image formats satori didn't like, CSS constraints I hadn't hit before.
+
+A URL change turned into touching almost every part of how the articles app describes itself to the outside world.
+
+## What building it alone actually means
+
+The DM module — including end-to-end encryption, and message edit/delete with time-window constraints — took real care, because there was no one to catch it if I got the encryption wrong or the delete window let someone edit something they shouldn't.
+
+That's the part solo development doesn't warn you about going in. It's not that any single problem is too hard. It's that every one of them is yours — the monolith, the race condition, the tinyint, the missing middleware, the broken query param. There's no one downstream who catches it before a user does.
+
+I don't think that's made me a better engineer than I'd have been on a team. It's made me a more paranoid one, in a way that's mostly useful: I check the seams now, because I've learned that's where CircleNet actually breaks.
