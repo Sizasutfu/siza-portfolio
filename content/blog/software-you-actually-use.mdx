@@ -1,0 +1,45 @@
+---
+title: "The difference between a side project and software you use"
+date: "2026-09-12"
+summary: "FixLog is the only app I've built that I depend on daily. That changed how I build everything else."
+tags: ["FixLog", "React Native", "Product"]
+---
+
+I fix phones. For a while I tracked every repair in a notebook — customer name, model, fault, what I replaced. It worked fine until it didn't. I'd lose track of which jobs were still waiting on parts, or what I'd charged for the same repair two months ago.
+
+So I built FixLog. It's a React Native app backed by Supabase, and it does four things: records a device, logs the fault, tracks status from intake to collected, and remembers what each repair cost.
+
+I've shipped side projects I was proud of and never opened again. FixLog is different, and the difference taught me more about building software than anything else I've made.
+
+## You can't avoid the rough edges
+
+With a side project, you use it the way you built it. You take the happy path, because you're the one who designed it.
+
+FixLog is different. It gets used when I'm standing at a counter with a customer waiting, or when I'm tired at the end of the day and just want to close out a job. Every extra tap is a real cost. Every screen that takes a second too long is a second I notice.
+
+The first version had a form with eleven fields. I filled it in twice before I cut it to five. That decision didn't come from a design principle — it came from being annoyed.
+
+## What I cut
+
+Things I removed, in order:
+
+- **Categories for repairs.** I thought I needed to classify every job — screen, battery, charging port, water damage. In practice, typing what's wrong is faster than picking from a list, and I never once used the categories to search.
+- **A dashboard.** Looked good in a screenshot. Told me nothing I didn't already know.
+- **Photos of each device.** Useful in theory. In practice, I'm not going to photograph every phone that comes in, and a feature you don't use is just a screen you have to skip past.
+- **Notes formatting.** Just a text box now. It was a rich text editor for about a week.
+
+None of this felt like a feature cut at the time. It felt like removing a speed bump I kept hitting.
+
+## What that changed about my other work
+
+CircleNet has far more features than FixLog. Some of them I'd defend. But building something I depend on changed how I think about the rest.
+
+I ask a different question now: not "would this be useful?" but "would I actually use this on a bad day, in a hurry, when I'm not in the mood?" If the answer is no, it probably doesn't need to exist.
+
+That's a much harder test, and it kills a lot more ideas.
+
+## The honest part
+
+FixLog isn't polished. It has a bug where the status list doesn't refresh if you background the app and come back. I know about it. I haven't fixed it because it's a minor annoyance and I've been working on other things.
+
+That's also the difference. A side project with a known bug feels unfinished. A tool you use with a known bug just feels like your tool.
