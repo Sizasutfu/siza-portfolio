@@ -11,31 +11,35 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://sizamndzawe.com"),
+  metadataBase: new URL("https://siza-portfolio.vercel.app"),
   title: {
     default: "Siza Mndzawe — Full-Stack Developer",
     template: "%s — Siza Mndzawe",
   },
   description:
     "Full-stack developer building web and mobile apps with Next.js, React Native and Express.",
-  openGraph: {
-    title: "Siza Mndzawe — Full-Stack Developer",
-    description:
-      "Full-stack developer building web and mobile apps with Next.js, React Native and Express.",
-    url: "https://sizamndzawe.com",
-    siteName: "Siza Mndzawe",
-    type: "website",
-  },
-  twitter: {
-    card: "summary_large_image",
-  },
 };
+
+const themeScript = `
+try {
+  var stored = localStorage.getItem('theme');
+  var dark = stored === 'dark' || (!stored && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if (dark) document.documentElement.classList.add('dark');
+} catch (e) {}
+`;
 
 export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html
+      lang="en"
+      className={`${inter.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className="flex min-h-dvh flex-col bg-white font-sans text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100">
         <Navbar />
         <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-16 sm:py-20">

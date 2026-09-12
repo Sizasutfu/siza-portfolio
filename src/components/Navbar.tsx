@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const links = [
   { href: "/", label: "Home" },
@@ -15,12 +16,10 @@ export default function Navbar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
-  // Close the menu whenever the route changes
   useEffect(() => {
     setOpen(false);
   }, [pathname]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
@@ -49,16 +48,16 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-neutral-200/80 bg-white/80 backdrop-blur-md dark:border-neutral-800/80 dark:bg-neutral-950/80">
-      <nav className="mx-auto flex max-w-3xl items-center gap-6 px-6 py-4 text-sm">
+      <nav className="mx-auto flex max-w-3xl items-center gap-3 px-6 py-4 text-sm">
         <Link
           href="/"
-          className="font-semibold tracking-tight transition hover:opacity-70"
+          className="mr-auto font-semibold tracking-tight transition hover:opacity-70"
         >
           Siza Mndzawe
         </Link>
 
         {/* Desktop links */}
-        <div className="ml-auto hidden items-center gap-1 sm:flex sm:gap-2">
+        <div className="hidden items-center gap-1 sm:flex sm:gap-2">
           {links.map((link) => (
             <Link
               key={link.href}
@@ -70,6 +69,8 @@ export default function Navbar() {
           ))}
         </div>
 
+        <ThemeToggle />
+
         {/* Mobile toggle */}
         <button
           type="button"
@@ -77,32 +78,14 @@ export default function Navbar() {
           aria-expanded={open}
           aria-controls="mobile-menu"
           aria-label={open ? "Close menu" : "Open menu"}
-          className="-mr-2 ml-auto inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 sm:hidden dark:text-neutral-400 dark:hover:bg-neutral-800"
+          className="-mr-2 inline-flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 transition hover:bg-neutral-100 sm:hidden dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           {open ? (
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           ) : (
-            <svg
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              aria-hidden="true"
-            >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
           )}
