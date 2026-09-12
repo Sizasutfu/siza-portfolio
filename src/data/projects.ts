@@ -104,7 +104,7 @@ export const projects: Project[] = [
       "Built with React Native and Supabase for auth and storage. Because it's a tool I actually depend on, it's the project where I've been most ruthless about cutting anything that got in the way.",
     ],
     tags: ["React Native", "Expo", "Supabase"],
-    year: "2025",
+    year: "2026",
     links: [
       { label: "Source", href: "https://github.com/Sizasutfu/Fixlog" },
     ],

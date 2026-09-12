@@ -18,7 +18,7 @@ const stack = [
   },
   {
     label: "Tooling",
-    items: ["Git", "Expo", "Vercel", "Postman"],
+    items: ["Git", "Expo", "Vercel", "Thunder client", "Railway"],
   },
 ];
 
