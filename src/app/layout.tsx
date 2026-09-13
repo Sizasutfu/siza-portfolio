@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://siza-portfolio-ten.vercel.app/"),
+  metadataBase: new URL("https://portfolio.circlenet.social"),
   title: {
     default: "Siza Mndzawe — Full-Stack Developer",
     template: "%s — Siza Mndzawe",
