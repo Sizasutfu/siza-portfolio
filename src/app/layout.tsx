@@ -18,6 +18,12 @@ export const metadata: Metadata = {
   },
   description:
     "Full-stack developer building web and mobile apps with Next.js, React Native and Express.",
+    openGraph: {
+      siteName: "Siza Mndzawe",
+      type: "website",
+      url: "https://portfolio.circlenet.social",
+    },
+
 };
 
 const personSchema = {
