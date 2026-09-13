@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { projects } from "@/data/projects";
 import ProjectCard from "@/components/ProjectCard";
+import { getAllPosts, formatDate } from "@/lib/posts";
 
 export default function Home() {
   const featured = projects.filter((p) => p.featured);
+  const posts = getAllPosts().slice(0, 3);
 
   return (
     <div className="space-y-20">
@@ -58,6 +60,46 @@ export default function Home() {
           ))}
         </div>
       </section>
+
+      {/* Recent writing */}
+      {posts.length > 0 && (
+        <section className="space-y-6">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold tracking-wider text-neutral-500 uppercase dark:text-neutral-400">
+              Writing
+            </h2>
+            <Link
+              href="/blog"
+              className="text-sm text-neutral-500 transition hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+            >
+              All posts →
+            </Link>
+          </div>
+
+          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+            {posts.map((post) => (
+              <li key={post.slug}>
+                <Link
+                  href={`/blog/${post.slug}`}
+                  className="group block space-y-1.5 py-5"
+                >
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h3 className="font-medium transition group-hover:opacity-70">
+                      {post.title}
+                    </h3>
+                    <span className="shrink-0 text-xs text-neutral-500">
+                      {formatDate(post.date)}
+                    </span>
+                  </div>
+                  <p className="text-sm text-neutral-600 dark:text-neutral-400">
+                    {post.summary}
+                  </p>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {/* Closing note */}
       <section className="border-t border-neutral-200 pt-10 dark:border-neutral-800">
