@@ -2,6 +2,7 @@ import Link from "next/link";
 
 const socials = [
   { label: "GitHub", href: "https://github.com/Sizasutfu" },
+  { label: "Instagram", href: "https://www.instagram.com/sbeats_sz" },
   { label: "Email", href: "mailto:sutfusiza@gmail.com" },
 ];
 
@@ -10,7 +11,7 @@ export default function Footer() {
     <footer className="border-t border-neutral-200 dark:border-neutral-800">
       <div className="mx-auto flex max-w-3xl flex-col gap-4 px-6 py-8 text-sm text-neutral-500 sm:flex-row sm:items-center sm:justify-between dark:text-neutral-400">
         <p>© {new Date().getFullYear()} Siza Mndzawe</p>
-        <div className="flex gap-5">
+        <div className="flex flex-wrap gap-5">
           {socials.map((s) => (
             <Link
               key={s.href}

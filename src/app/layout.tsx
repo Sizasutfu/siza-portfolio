@@ -20,6 +20,34 @@ export const metadata: Metadata = {
     "Full-stack developer building web and mobile apps with Next.js, React Native and Express.",
 };
 
+const personSchema = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  name: "Siza Mndzawe",
+  alternateName: ["Sbeats_sz", "King Pele"],
+  url: "https://portfolio.circlenet.social",
+  email: "sutfusiza@gmail.com",
+  jobTitle: "Full-Stack Developer",
+  description:
+    "Full-Stack Developer and music producer from Eswatini. I build web and mobile apps with Next.js, React Native and Express.",
+  sameAs: [
+    "https://github.com/Sizasutfu",
+    "https://www.instagram.com/sbeats_sz",
+    "https://www.facebook.com/profile.php?id=100080187507190",
+  ],
+  knowsAbout: [
+    "Next.js",
+    "React Native",
+    "Express",
+    "MySQL",
+    "Supabase",
+    "WebSockets",
+    "Music production",
+    "Deep house",
+    "Amapiano",
+  ],
+};
+
 const themeScript = `
 try {
   var stored = localStorage.getItem('theme');
@@ -39,6 +67,10 @@ export default function RootLayout({
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+        />
       </head>
       <body className="flex min-h-dvh flex-col bg-white font-sans text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100">
         <Navbar />

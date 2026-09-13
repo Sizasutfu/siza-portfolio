@@ -4,7 +4,7 @@ import Link from "next/link";
 export const metadata: Metadata = {
   title: "About",
   description:
-    "Full-stack developer working with Next.js, React Native, Express and MySQL.",
+    "Full-stack developer and music producer from Eswatini, working with Next.js, React Native, Express and MySQL.",
 };
 
 const stack = [
@@ -18,7 +18,7 @@ const stack = [
   },
   {
     label: "Tooling",
-    items: ["Git", "Expo", "Vercel", "Thunder client", "Railway"],
+    items: ["Git", "Expo", "Vercel", "Postman"],
   },
 ];
 
@@ -66,6 +66,20 @@ export default function AboutPage() {
         <p>
           I work with AI-assisted tooling and review everything I ship. I'm
           open to freelance work and full-time roles.
+        </p>
+        <p>
+          Outside of code I produce music as{" "}
+          <a
+            href="https://www.instagram.com/sbeats_sz"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline underline-offset-4 transition hover:opacity-70"
+          >
+            Sbeats_sz
+          </a>
+          , mostly deep house, 3 steps and amapiano. Producing and building software
+          have more in common than they look — both are mostly about knowing
+          what to leave out.
         </p>
       </div>
 
