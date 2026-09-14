@@ -32,7 +32,7 @@ export const skillGroups = [
   },
   {
     label: "Backend",
-    items: ["Node.js", "Express", "MySQL", "Supabase", "WebSockets"],
+    items: ["Node.js", "Express", "MySQL", "python", "Supabase", "WebSockets"],
   },
   {
     label: "Tooling",
