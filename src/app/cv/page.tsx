@@ -10,7 +10,8 @@ import {
 
 export const metadata: Metadata = {
   title: "CV",
-  description: "Siza Mndzawe — full-stack developer. Experience, projects and skills.",
+  description:
+    "Siza Mndzawe — full-stack developer. Experience, projects and skills.",
 };
 
 function Section({
@@ -69,7 +70,7 @@ export default function CVPage() {
           </h1>
           <a
             href="/mycv.pdf"
-            className="text-sm font-medium underline underline-offset-4 transition hover:opacity-70"
+            className="no-print text-sm font-medium underline underline-offset-4 transition hover:opacity-70"
           >
             Download PDF
           </a>
@@ -80,10 +81,18 @@ export default function CVPage() {
         </p>
 
         <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-neutral-500">
-          <a href="mailto:sutfusiza@gmail.com" className="transition hover:text-neutral-900 dark:hover:text-neutral-100">
+          <a
+            href="mailto:sutfusiza@gmail.com"
+            className="transition hover:text-neutral-900 dark:hover:text-neutral-100"
+          >
             sutfusiza@gmail.com
           </a>
-          <a href="https://github.com/Sizasutfu" target="_blank" rel="noreferrer" className="transition hover:text-neutral-900 dark:hover:text-neutral-100">
+          <a
+            href="https://github.com/Sizasutfu"
+            target="_blank"
+            rel="noreferrer"
+            className="transition hover:text-neutral-900 dark:hover:text-neutral-100"
+          >
             github.com/Sizasutfu
           </a>
         </p>
@@ -114,7 +123,9 @@ export default function CVPage() {
                     {project.title}
                   </Link>
                 </h3>
-                <span className="text-sm text-neutral-500">{project.year}</span>
+                <span className="text-sm text-neutral-500">
+                  {project.year}
+                </span>
               </div>
               <p className="text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
                 {project.description}
@@ -147,13 +158,15 @@ export default function CVPage() {
         </dl>
       </Section>
 
-      <Section title="Education">
-        <div className="space-y-6">
-          {education.map((entry) => (
-            <Entry key={`${entry.role}-${entry.org}`} entry={entry} />
-          ))}
-        </div>
-      </Section>
+      {education.length > 0 && (
+        <Section title="Education">
+          <div className="space-y-6">
+            {education.map((entry) => (
+              <Entry key={`${entry.role}-${entry.org}`} entry={entry} />
+            ))}
+          </div>
+        </Section>
+      )}
     </div>
   );
 }
