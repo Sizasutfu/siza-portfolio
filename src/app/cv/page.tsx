@@ -11,7 +11,7 @@ import {
 export const metadata: Metadata = {
   title: "CV",
   description:
-    "Siza Mndzawe — full-stack developer. Experience, projects and skills.",
+    "Siza Mndzawe, full-stack developer. Experience, projects and skills.",
 };
 
 function Section({
@@ -49,7 +49,7 @@ function Entry({ entry }: { entry: (typeof experience)[number] }) {
           {entry.points.map((point) => (
             <li key={point} className="flex gap-2.5">
               <span aria-hidden="true" className="text-neutral-400">
-                —
+                •
               </span>
               <span>{point}</span>
             </li>
