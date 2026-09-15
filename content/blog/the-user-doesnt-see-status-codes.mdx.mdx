@@ -5,7 +5,7 @@ summary: "Five bugs from one CircleNet session. Two crashed the server, three re
 tags: ["CircleNet", "Express", "React Native", "Debugging"]
 ---
 
-Today I built a per-field Edit Profile flow — instead of one long form, each field gets its own screen. Name, bio, username, avatar, cover. Tap a row, change one thing, save.
+Today I built a per-field Edit Profile flow. Instead of one long form, each field gets its own screen. Name, bio, username, avatar, cover. Tap a row, change one thing, save.
 
 It took four hours. Most of that was chasing the same symptom in different clothes.
 
@@ -13,49 +13,59 @@ It took four hours. Most of that was chasing the same symptom in different cloth
 
 Every bug today ended the same way. The user tapped Save, and nothing changed.
 
-Two of them crashed the server. Three of them returned `200 OK` and a success message. From the user's seat those are indistinguishable — which is the actual problem. The server did two very different things, and the client showed one thing: nothing.
+Two of them crashed the server. Three of them returned `200 OK` and a success message. From the user's seat those are indistinguishable, which is the actual problem. The server did two very different things, and the client showed one thing: nothing.
 
 The first time, I assumed it was a client bug. The second time, I started taking notes. By the fifth, I understood what I was actually looking for.
 
-## Bug 1 — `req.body` is undefined
+## Bug 1: req.body is undefined
 
 The repost endpoint crashed with:
 
 ```text
 TypeError: Cannot destructure property 'text' of 'req.body' as it is undefined.
-The mobile client was calling api.post('/posts/:id/repost') with no body. Express only populates req.body when there's a body and a matching Content-Type. With neither, it stays undefined, and const { text } = req.body throws.
+```
+
+The mobile client was calling `api.post('/posts/:id/repost')` with no body. Express only populates `req.body` when there's a body and a matching `Content-Type`. With neither, it stays undefined, and the destructure throws.
 
 Fix:
 
-js
+```js
 const body = req.body || {};
+```
+
 Small, obvious, easy. I moved on.
 
-Bug 2 — same shape, different endpoint
+## Bug 2: same shape, different endpoint
+
 Two hours later, video views:
 
-text
+```text
 TypeError: Cannot read properties of undefined (reading 'watchedSeconds')
-Same story. The client sends api.post('/posts/:id/video-view') with no payload. Same crash. Same one-line fix.
+```
 
-This time I noticed the pattern. I started asking: which other endpoints assume a body?
+Same story. The client sends `api.post('/posts/:id/video-view')` with no payload. Same crash. Same one-line fix.
 
-I opened the routes file and scanned every POST and PUT for a destructure on req.body. Found two more that had the same assumption but were only surviving because the clients happened to always send something. They weren't bugs yet. They were bugs waiting for a caller.
+This time I noticed the pattern. I started asking which other endpoints assume a body.
+
+I opened the routes file and scanned every POST and PUT for a destructure on `req.body`. Found two more that had the same assumption but were only surviving because the clients happened to always send something. They weren't bugs yet. They were bugs waiting for a caller.
 
 That's the difference between fixing a bug and fixing a class of bug. The first is one line. The second is thirty seconds of reading your own code with a specific question in mind.
 
-Bug 3 — the silent one
-The per-field Edit Profile screen was live. I tapped "Bio", typed something new, hit Save. The API returned:
+## Bug 3: the silent one
 
-json
+The per-field Edit Profile screen was live. I tapped Bio, typed something new, hit Save. The API returned:
+
+```json
 { "success": true, "message": "Profile updated." }
+```
+
 And the bio didn't change.
 
 No error. No crash. Just a lie.
 
-I checked the client first, because that's the instinct. The request was going out correctly — I could see it in the network tab, a clean PATCH with { bio: "new bio" } and nothing else. The response was 200. So the client was right and the server was wrong, which took me a while to accept, because the server was also saying it was fine.
+I checked the client first, because that's the instinct. The request was going out correctly. I could see it in the network tab, a clean PATCH with `{ bio: "new bio" }` and nothing else. The response was 200. So the client was right and the server was wrong, which took me a while to accept, because the server was also saying it was fine.
 
-The problem was in updateProfile. It destructured req.body into a full user record and did a full-row UPDATE. But the per-field client only sends one field. So the server was happily writing name: undefined, email: undefined, bio: "new bio" — or rather, whatever defaults the destructure produced.
+The problem was in `updateProfile`. It destructured `req.body` into a full user record and did a full-row UPDATE. But the per-field client only sends one field. So the server was happily writing undefined for every field the client didn't send, or rather, whatever defaults the destructure produced.
 
 In my case the defaults happened to be undefined, and MySQL silently ignored undefined in the SET clause, leaving the existing values alone. So the request succeeded. It updated exactly the one column the client sent. And it was supposed to update all five.
 
@@ -63,24 +73,27 @@ The bug wasn't that the write failed. The bug was that the write succeeded on th
 
 I rewrote it to merge. Every field checks: did the client send this? If yes, use it. If no, keep the existing value.
 
-js
+```js
 const name = body.name !== undefined
   ? String(body.name).trim()
   : existing.name;
+```
+
 That's three lines instead of one. It's also three lines that don't silently discard data when the caller changes.
 
-Bug 4 — multer wasn't running
+## Bug 4: multer wasn't running
+
 The avatar screen: pick a photo, hit Save. 200 OK. Avatar unchanged.
 
-The controller was parsing req.compressedFiles.avatar, but req.compressedFiles was empty. Because multer wasn't attached to the route. PUT /users/:id was registered as plain JSON, so multipart FormData went nowhere.
+The controller was parsing `req.compressedFiles.avatar`, but `req.compressedFiles` was empty. Because multer wasn't attached to the route. `PUT /users/:id` was registered as plain JSON, so multipart FormData went nowhere.
 
-This is the kind of bug that's obvious the moment you know where to look and invisible until then. The request arrives. Express parses it as JSON, fails silently because it's not JSON, and passes an empty object down the chain. The controller looks for a file, finds nothing, and does what it always does when there's no file — skip the upload and update the text fields.
+This is the kind of bug that's obvious the moment you know where to look and invisible until then. The request arrives. Express parses it as JSON, fails silently because it's not JSON, and passes an empty object down the chain. The controller looks for a file, finds nothing, and does what it always does when there's no file: skip the upload and update the text fields.
 
 There's nothing wrong with any of that logic in isolation. It's only wrong because the client is sending something the route can't see.
 
 I added it to the route:
 
-js
+```js
 router.put(
   '/:id',
   requireAuth,
@@ -91,80 +104,65 @@ router.put(
   compressUploads,
   userController.updateProfile
 );
+```
+
 The part that took longest wasn't writing this. It was convincing myself the client was actually sending the file, because the network tab showed a 200 and I'd already burned an hour on the previous bug assuming the server was fine.
 
-Bug 5 — the middleware only handled one field name
+## Bug 5: the middleware only handled one field name
+
 Avatar upload now reached the middleware. Still nothing changed.
 
-The middleware — compressUploads — was hardcoded to look for req.files.image. The old /picture and /cover routes used that name. But the new combined route used avatar and coverImage.
+The middleware, `compressUploads`, was hardcoded to look for `req.files.image`. The old `/picture` and `/cover` routes used that name. But the new combined route used `avatar` and `coverImage`.
 
-It iterated zero files, set req.compressedFiles = {}, and passed through silently.
+It iterated zero files, set `req.compressedFiles` to an empty object, and passed through silently.
 
-This one is my fault in a specific way: I wrote a middleware that knew about one field name, and then I changed the field names on the route. The middleware didn't error. It couldn't error — there was no file to process, which is a perfectly valid state. It just did nothing and returned.
+This one is my fault in a specific way. I wrote a middleware that knew about one field name, and then I changed the field names on the route. The middleware didn't error. It couldn't error, because there was no file to process, which is a perfectly valid state. It just did nothing and returned.
 
 I rewrote it to loop over every field name multer provides:
 
-js
+```js
 Object.entries(req.files || {}).forEach(([fieldName, val]) => {
   const file = Array.isArray(val) ? val[0] : val;
   if (file) entries.push([fieldName, file]);
 });
-Two lines longer. No longer knows what an "avatar" is. It just compresses whatever came through the door.
+```
 
-What I actually learned
+Two lines longer. No longer knows what an avatar is. It just compresses whatever came through the door.
+
+## What I actually learned
+
 Every one of these bugs passed the happy path.
 
 They passed a code review. They passed a smoke test. They returned the status code the client expects. They logged success.
 
 The only thing they didn't do was work.
 
-The fix for each was one or two lines. The work was noticing something was wrong. When you're staring at 200 OK and a UI that won't update, your first instinct is to blame the client, then the cache, then the state manager, then the network tab. The last place you look is the server saying "done."
+The fix for each was one or two lines. The work was noticing something was wrong. When you're staring at 200 OK and a UI that won't update, your first instinct is to blame the client, then the cache, then the state manager, then the network tab. The last place you look is the server saying done.
 
-I think that instinct is backwards, and I'm trying to unlearn it. The server telling you it succeeded is only useful if you trust what "succeeded" means. On a partial-update endpoint, "succeeded" can mean "I updated the one field you sent and ignored the four you didn't." That's technically true. It's also not what anyone means.
+I think that instinct is backwards, and I'm trying to unlearn it. The server telling you it succeeded is only useful if you trust what succeeded means. On a partial-update endpoint, succeeded can mean: I updated the one field you sent and ignored the four you didn't. That's technically true. It's also not what anyone means.
 
-The three patterns
+## The three patterns
+
 Looking back at the five, they cluster into three shapes.
 
-Assume the body exists. Bugs 1 and 2. The fix is defensive destructuring, or a middleware that ensures req.body is always an object. One line, applied everywhere. Not interesting, but correct.
+**Assume the body exists.** Bugs 1 and 2. The fix is defensive destructuring, or a middleware that ensures `req.body` is always an object. One line, applied everywhere. Not interesting, but correct.
 
-Update by overwrite. Bug 3. The endpoint was written for a caller that sends every field. It kept working when a caller arrived that sends one. It didn't fail — it wrote a partial record and reported success. This is the most dangerous shape, because it doesn't look broken. The fix is merge-on-write for anything that accepts a partial payload.
+**Update by overwrite.** Bug 3. The endpoint was written for a caller that sends every field. It kept working when a caller arrived that sends one. It didn't fail. It wrote a partial record and reported success. This is the most dangerous shape, because it doesn't look broken. The fix is merge-on-write for anything that accepts a partial payload.
 
-Silent middleware. Bugs 4 and 5. A layer in the chain doesn't find what it expects, treats that as valid input, and passes through. Nothing errors because an empty file list is a legal state. The fix is making the middleware dumber — process whatever arrives, don't look for a specific key.
+**Silent middleware.** Bugs 4 and 5. A layer in the chain doesn't find what it expects, treats that as valid input, and passes through. Nothing errors because an empty file list is a legal state. The fix is making the middleware dumber: process whatever arrives, don't look for a specific key.
 
 None of these are hard problems. All of them are hard to see, and all of them get worse as the codebase grows callers.
 
-What I'd do differently
+## What I'd do differently
+
 Two things.
 
-Log the request body on every write endpoint. I added one console.log and solved three of the five bugs in a minute. Not permanently — just enough to see whether the client sent what I thought it sent. In production I'd rather have a request logger that captures the shape of the body (keys, not values) than no visibility at all.
+**Log the request body on every write endpoint.** I added one console log and solved three of the five bugs in a minute. Not permanently. Just enough to see whether the client sent what I thought it sent. In production I'd rather have a request logger that captures the shape of the body (keys, not values) than no visibility at all.
 
-Prefer merge to overwrite. The full-row UPDATE was correct when there was one caller. The moment there were two, it silently became a data-loss bug. Any update endpoint that takes a partial payload and does SET a=?, b=?, c=? is one caller away from wiping columns.
+**Prefer merge to overwrite.** The full-row UPDATE was correct when there was one caller. The moment there were two, it silently became a data-loss bug. Any update endpoint that takes a partial payload and does `SET a=?, b=?, c=?` is one caller away from wiping columns.
 
 I keep learning the same lesson about APIs: they should fail loudly, or they should be honest about what they did. The worst kind of API is one that tells you it succeeded when it didn't.
 
-Today's bugs were all that kind — and the fix in every case was to make the server stricter about what it accepted, or louder about what it did.
+Today's bugs were all that kind, and the fix in every case was to make the server stricter about what it accepted, or louder about what it did.
 
 That's the trade. 200 OK is a promise. Most of my endpoints today were breaking it.
-
-text
-
----
-
-## What I added
-
-**Bug 2 now has a follow-up:** finding two more endpoints with the same assumption before they caused problems. That's the difference between fixing a bug and fixing a class.
-
-**Bug 3 now explains the detective work.** Why the client looked wrong first, why the network tab confirmed it wasn't, and the specific detail that MySQL silently ignores `undefined` in a `SET` clause. That last part is the *reason* the bug was invisible, and it wasn't in the original.
-
-**Bug 4 has a paragraph on why it's invisible.** Express parsing multipart as JSON, failing silently, passing an empty object down. That's the mechanism.
-
-**Bug 5 has a paragraph on why it's the author's fault specifically.** You wrote a middleware that knew about one field name and then changed the field names. That's honest and more instructive than the fix.
-
-**New section: "The three patterns."** Groups the five bugs into three shapes. This is the analytical payoff — it turns a debugging log into a lesson someone can apply.
-
-**Expanded "What I'd do differently."** Added the point about request logging having a permanent form, not just a temporary `console.log`.
-
-**New closing paragraph.** "`200 OK` is a promise. Most of my endpoints today were breaking it." Ties the whole thing together.
-
-The post is now around 1,400 words instead of 800. Still readable in one sitting, but with enough depth that someone debugging a similar problem would actually learn something.
-
