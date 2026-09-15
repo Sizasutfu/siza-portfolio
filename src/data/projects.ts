@@ -2,11 +2,18 @@ export type ProjectLink = { label: string; href: string };
 
 export type ProjectFeature = { name: string; detail: string };
 
+export type ProjectScreenshot = {
+  src: string;
+  alt: string;
+  caption?: string;
+};
+
 export type Project = {
   slug: string;
   title: string;
   description: string;
   features?: ProjectFeature[];
+  screenshots?: ProjectScreenshot[];
   body?: string[];
   tags: string[];
   year: string;
@@ -20,6 +27,13 @@ export const projects: Project[] = [
     title: "CircleNet",
     description:
       "A social platform with feeds, groups, anonymous messages and live streaming — built three separate times against the same Express + MySQL backend.",
+    screenshots: [
+      {
+        src: "/projects/circlenet-mobile.jpg",
+        alt: "CircleNet mobile app showing the global feed with posts, likes and reposts",
+        caption: "React Native client — global feed",
+      },
+    ],
     features: [
       {
         name: "Feed",
@@ -82,11 +96,18 @@ export const projects: Project[] = [
     title: "FixLog",
     description:
       "A repair log for the phones I fix — devices, faults, parts and turnaround. I use it daily.",
+    screenshots: [
+      {
+        src: "/projects/fixlog.jpg",
+        alt: "FixLog showing a list of completed phone repairs with device, fault, fix and price",
+        caption: "The repair list — device, fault, fix and amount for each job",
+      },
+    ],
     features: [
       {
-        name: "Device records",
+        name: "Repair log",
         detail:
-          "Model, fault description and repair notes for each job, searchable by customer or device.",
+          "Every job in one list — device, reported fault, what the fix was, and what it cost. Newest first.",
       },
       {
         name: "Status tracking",

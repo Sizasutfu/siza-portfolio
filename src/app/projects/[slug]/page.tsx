@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { projects } from "@/data/projects";
 
 export function generateStaticParams() {
@@ -66,6 +67,36 @@ export default async function ProjectPage({
           ))}
         </div>
       </header>
+
+      {project.screenshots && project.screenshots.length > 0 && (
+        <section>
+          <div
+            className={`grid gap-6 ${
+              project.screenshots.length > 1 ? "sm:grid-cols-2" : "max-w-xs"
+            }`}
+          >
+            {project.screenshots.map((shot) => (
+              <figure key={shot.src} className="space-y-2">
+                <div className="relative aspect-[9/19.5] overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800">
+                  <Image
+                    src={shot.src}
+                    alt={shot.alt}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 320px"
+                    className="object-cover object-top"
+                    priority
+                  />
+                </div>
+                {shot.caption && (
+                  <figcaption className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {shot.caption}
+                  </figcaption>
+                )}
+              </figure>
+            ))}
+          </div>
+        </section>
+      )}
 
       {project.body && project.body.length > 0 && (
         <div className="space-y-4 border-t border-neutral-200 pt-8 dark:border-neutral-800">
