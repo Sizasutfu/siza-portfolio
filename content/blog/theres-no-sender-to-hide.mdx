@@ -1,7 +1,7 @@
 ---
 title: "There's no sender to hide"
 date: "2026-09-15"
-summary: "Whispers is CircleNet's anonymous message feature. The interesting thing isn't that it hides who sent a message — it's that there's nothing to hide in the first place."
+summary: "Whispers is CircleNet's anonymous message feature. The interesting thing isn't that it hides who sent a message. It's that there's nothing to hide in the first place."
 tags: ["CircleNet", "Security", "Product"]
 ---
 
@@ -17,14 +17,14 @@ Whispers doesn't work that way.
 
 The `anonymous_messages` table has five columns that matter:
 
-- `recipient_id` — who the message is for
-- `message` — the text
-- `sender_ip_hash` — a salted hash of the sender's IP
-- `is_reported`, `is_deleted` — flags for moderation
+- `recipient_id`: who the message is for
+- `message`: the text
+- `sender_ip_hash`: a salted hash of the sender's IP
+- `is_reported`, `is_deleted`: flags for moderation
 
 There is no `sender_id`. Not a nullable one, not an obfuscated one. Nothing that references a user. The sender was never recorded.
 
-This is the whole trick. Anonymity isn't enforced anywhere — it's structural. You can't leak a column that doesn't exist. Any query that touches this table, now or in a year, is safe by default.
+This is the whole trick. Anonymity isn't enforced anywhere. It's structural. You can't leak a column that doesn't exist. Any query that touches this table, now or in a year, is safe by default.
 
 ## The one thing that is stored
 
@@ -36,3 +36,55 @@ The IP is hashed before it ever reaches the database:
 function _hashIp(ip) {
   return crypto.createHash('sha256').update(ip + IP_HASH_SALT).digest('hex');
 }
+```
+
+I want to be honest about what this actually provides. **A hash of an IP is not strong anonymity.** IPv4 is about four billion addresses. If someone has the database *and* the salt, they can compute every possible hash and reverse the mapping in minutes.
+
+The hash buys distance, not secrecy. The raw IP is never stored. If the table leaks, the attacker needs a second independent thing, the salt, and then a brute-force. That raises the bar from "a bad query" to "a determined adversary with two pieces."
+
+If I did this again, I'd add a rotating salt per time window. The current scheme produces the same hash for the same sender forever, which means two whispers from the same person can be linked to each other. Nobody sees that today, but the data allows it. Worth fixing.
+
+## What you give up
+
+This design isn't free. It costs real features:
+
+**No replies to the sender.** There is no sender to reply to.
+
+**No mute or block of a specific person.** You can delete a message, but not stop the next one from the same source. The only lever is a rate limiter keyed by IP and recipient, which applies broadly.
+
+**No notification back to whoever sent it.** There's nothing to notify.
+
+That last constraint is where the interesting part lives.
+
+## The one-to-many reply
+
+Instead of a reply mechanism, Whispers has a *post to feed* flow. The recipient reads a whisper, writes a caption, and posts both publicly. The whisper is rendered as an image (a card with the anonymous text, generated client-side on a canvas) and embedded in the post.
+
+What makes this work is what gets written to `posts`:
+
+```sql
+INSERT INTO posts (user_id, text, image, created_at)
+VALUES (?, ?, ?, NOW())
+```
+
+The `user_id` here is the **recipient's**. Not the sender's, because there is no sender's. The post is authored by the person who received the whisper, and the anonymous content is a picture inside it.
+
+So a whisper can become public without the sender becoming public. The message goes out. The sender doesn't, because they were never in the data.
+
+## The slug isn't a full escape hatch
+
+Each user has a `link_slug`, a UUID they can rotate. If someone is harassing you, you regenerate the slug and the old link stops working. That's the theory.
+
+Except the username-based route still works. If someone knows your username and your whispers are enabled, they can send you a message regardless of what the slug currently is. Rotating only cuts off someone who *only* had the slug.
+
+I know this, and I've left it in. It's a real limitation. A complete version would tie the setting more tightly to the slug, or return a 404 on the username route when whispers are enabled but the slug has been rotated recently. Neither is hard. Neither is done. I'd rather say so than pretend the feature is finished.
+
+## The general idea
+
+Every anonymous feature I've seen before this one starts from the same premise: the sender is a user, and we make them anonymous. That's the wrong frame.
+
+The right frame is: don't make the sender anonymous. Don't have a sender.
+
+The features you lose are real, and the trade-offs don't all resolve cleanly. But what's left is a system where anonymity isn't a property you have to protect. It's a property that doesn't need protecting.
+
+I'd rather maintain a system where the answer to "can this leak the sender" is "there is no sender" than one where the answer is "not if we're careful."
