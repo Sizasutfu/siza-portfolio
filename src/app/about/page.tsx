@@ -49,8 +49,8 @@ export default function AboutPage() {
             </Link>
             , a repair log I wrote for my own phone repair work. I use it
             every day, which turned out to be a much stricter test than any
-            side project — every rough edge shows up when you can't avoid
-            the tool.
+            side project. Every rough edge shows up when you can't avoid the
+            tool.
           </p>
           <p>
             Before that I built{" "}
@@ -60,9 +60,9 @@ export default function AboutPage() {
             >
               CircleNet
             </Link>{" "}
-            three times over — once in vanilla JavaScript, once in Next.js,
-            once in React Native — against the same backend. Doing the same
-            product in three stacks taught me more than three separate
+            three times over: once in vanilla JavaScript, once in Next.js,
+            once in React Native. All against the same backend. Doing the
+            same product in three stacks taught me more than three separate
             projects would have.
           </p>
           <p>
@@ -80,7 +80,7 @@ export default function AboutPage() {
               Sbeats_sz
             </a>
             , mostly deep house and amapiano. Producing and building software
-            have more in common than they look — both are mostly about knowing
+            have more in common than they look: both are mostly about knowing
             what to leave out.
           </p>
         </div>
