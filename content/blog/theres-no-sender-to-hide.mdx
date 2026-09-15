@@ -1,0 +1,38 @@
+---
+title: "There's no sender to hide"
+date: "2026-09-15"
+summary: "Whispers is CircleNet's anonymous message feature. The interesting thing isn't that it hides who sent a message — it's that there's nothing to hide in the first place."
+tags: ["CircleNet", "Security", "Product"]
+---
+
+Whispers is the anonymous feature in CircleNet. Anyone with your link can send you a message, and you never find out who sent it.
+
+As a product, it's simple. As a design decision, it's the most careful thing in the app.
+
+Most anonymous features start the same way: the sender is a user, and the job is to hide them. There's an `author_id` column, a check in the serializer, a conditional in the UI. That works until someone joins the wrong table, or returns the raw row from a new endpoint, or logs the object somewhere you forgot. Anonymity becomes a property of *every code path that could ever touch the data*, which means it's a property that will eventually break.
+
+Whispers doesn't work that way.
+
+## What the row actually stores
+
+The `anonymous_messages` table has five columns that matter:
+
+- `recipient_id` — who the message is for
+- `message` — the text
+- `sender_ip_hash` — a salted hash of the sender's IP
+- `is_reported`, `is_deleted` — flags for moderation
+
+There is no `sender_id`. Not a nullable one, not an obfuscated one. Nothing that references a user. The sender was never recorded.
+
+This is the whole trick. Anonymity isn't enforced anywhere — it's structural. You can't leak a column that doesn't exist. Any query that touches this table, now or in a year, is safe by default.
+
+## The one thing that is stored
+
+You can't build an anonymous feature with zero accountability. Somewhere you need to be able to say "this sender is abusing the system" and do something about it. That's what `sender_ip_hash` is for.
+
+The IP is hashed before it ever reaches the database:
+
+```js
+function _hashIp(ip) {
+  return crypto.createHash('sha256').update(ip + IP_HASH_SALT).digest('hex');
+}
