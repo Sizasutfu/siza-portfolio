@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { projects } from "@/data/projects";
 import ProjectCard from "@/components/ProjectCard";
 import { getAllPosts, formatDate } from "@/lib/posts";
@@ -11,9 +12,21 @@ export default function Home() {
     <div className="space-y-20">
       {/* Hero */}
       <section className="space-y-6">
-        <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
-          Siza Mndzawe
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-full">
+            <Image
+              src="/me.png"
+              alt="Siza Mndzawe"
+              fill
+              sizes="48px"
+              className="object-cover"
+              priority
+            />
+          </div>
+          <p className="text-sm font-medium text-neutral-500 dark:text-neutral-400">
+            Siza Mndzawe
+          </p>
+        </div>
 
         <h1 className="text-4xl font-semibold tracking-tight text-balance sm:text-5xl">
           I build full-stack apps end to end.
