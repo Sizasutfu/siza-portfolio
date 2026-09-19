@@ -1,0 +1,215 @@
+---
+title: "The right answer, the wrong shape"
+date: "2026-09-19"
+summary: "Five bugs from one day. Every one passed a value that was correct in one layer and unusable in the next. Nothing crashed, every endpoint returned 200, and every fix was a coercion."
+tags: ["CircleNet", "React Native", "Express", "TypeScript", "WebSockets"]
+---
+
+Today I shipped reply notifications, an email verification gate, a typing indicator in the messages inbox, and two polish passes on search. The features were straightforward. The bugs underneath them weren't.
+
+Every one of them had the same shape: **a value that was correct in the layer that produced it and wrong in the layer that consumed it**. Nothing crashed. Every endpoint returned 200. Every fix was a coercion, or a rename, or a lookup that replaced a cache.
+
+## Bug 1: The `0` that isn't `false`
+
+The first one showed up as a red screen:
+
+```
+ERROR  Text strings must be rendered within a <Text> component.
+```
+
+No stack trace worth reading. Just a wall of components, one of which was quietly rendering a bare number.
+
+The culprit was this line in `MessagesScreen`:
+
+```tsx
+{item.other_verified && (
+  <VerificationBadge size={14} color={colors.primary} />
+)}
+```
+
+`other_verified` comes back from MySQL as `0` or `1`, not `true` or `false`. In JavaScript, `0 && anything` evaluates to `0` — not `false`, not `null`, not `undefined`. It evaluates to the number zero.
+
+React Native renders numbers as text. But this `0` isn't inside a `<Text>` — it's a direct child of a `<View>`. So the renderer reaches for the text component and doesn't find one.
+
+The fix is one character:
+
+```tsx
+{!!item.other_verified && (
+  <VerificationBadge size={14} color={colors.primary} />
+)}
+```
+
+`!!0` is `false`. `false && X` renders nothing. Everything works.
+
+I'd known about this pattern for years. I still wrote it. The reason is that `{flag && <Component />}` is so idiomatic that it goes on autopilot, and the only time it fails is when `flag` is a number that came from a database that doesn't have a boolean type.
+
+## Bug 2: The field that isn't `false`
+
+The verification gate was supposed to lock unverified users onto an email verification screen and let everyone else through. I wrote the gate to fire only when the answer was explicitly false:
+
+```tsx
+const needsEmailVerification = !!user && emailVerified === false;
+```
+
+The `=== false` was deliberate. If the API forgot to send the field — because the account predates the flag, or because a mobile login path uses a different payload shape — I didn't want to lock that user out.
+
+Then verified users started landing on the verification screen.
+
+The bug wasn't in the gate. It was in `AuthContext`, two layers up:
+
+```ts
+emailVerified: !!userWithoutToken.email_verified,
+```
+
+`!!` collapses three states into two. When the backend sends `email_verified: 1`, you get `true`. When the backend sends nothing, you also get `false`. And `false` is exactly what my gate was waiting for.
+
+The bug was that I'd asked for a boolean and the API was speaking a dialect with three states: `true`, `false`, and unset. My translation layer threw away the third.
+
+The fix was to preserve it:
+
+```ts
+function readBooleanFlag(raw: any, keys: string[]): boolean | undefined {
+  if (!raw) return undefined;
+  for (const key of keys) {
+    const v = raw[key];
+    if (v === undefined || v === null) continue;
+    if (typeof v === 'boolean') return v;
+    if (v === 1 || v === '1' || v === 'true') return true;
+    if (v === 0 || v === '0' || v === 'false') return false;
+    return !!v;
+  }
+  return undefined;
+}
+```
+
+Read every alias the API might use. Distinguish `false` from unset. Preserve `undefined` all the way up to the gate.
+
+That's a lot of ceremony for one boolean. It's also the only version that doesn't silently misclassify users the first time the backend changes how it serializes a response.
+
+## Bug 3: The count that's a string
+
+The search results screen was showing every post's engagement as zero. Likes, comments, reposts — all empty. The same posts on the home feed showed real counts.
+
+The two screens fetch posts from different endpoints. The home feed returns them hydrated: the `PostCard` gets arrays and numbers. The search endpoint returned rows straight from MySQL, where `COUNT(*)` comes back as a string, not a number.
+
+The `PostCard` reads like this:
+
+```ts
+function getLikeCount(post: any): number {
+  if (typeof post.likesCount === 'number') return post.likesCount;
+  if (typeof post.likeCount === 'number') return post.likeCount;
+  if (typeof post.like_count === 'number') return post.like_count;
+  if (Array.isArray(post.likes)) return post.likes.length;
+  return 0;
+}
+```
+
+`typeof "42"` is `'string'`. `typeof 42` is `'number'`. The guard rejects the string and falls through to `0`.
+
+The client was right to be strict. The server was right to send the count. They just weren't speaking the same language.
+
+I fixed it at the client boundary — build a canonical post shape on the client, coerce every count field to a real number, mirror it onto every alias `PostCard` might look for:
+
+```ts
+function toNumber(v: any): number {
+  if (v === null || v === undefined) return 0;
+  if (typeof v === 'number') return Number.isFinite(v) ? v : 0;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : 0;
+}
+```
+
+But I also fixed the backend. The search endpoint was supposed to hydrate posts the same way the feed does — it just never ran the hydration step. Two paths, one of which forgot a step, and the bug only showed up on one of them.
+
+## Bug 4: The broadcast that went nowhere
+
+The typing indicator in the chat screen worked from the day I built it. The typing indicator in the inbox never worked at all.
+
+The server code looked right:
+
+```js
+function _broadcastTyping(conversationId, typingUserId, isTyping) {
+  const members = activeConversations.get(conversationId);
+  if (!members) return;
+  const payload = { type: 'typing', conversationId, userId: typingUserId, isTyping };
+  for (const memberId of members) {
+    if (memberId === typingUserId) continue;
+    notifyUser(memberId, payload);
+  }
+}
+```
+
+`activeConversations` is a map of user ids who've joined each conversation room. It's populated by a `join_conversation` message, which is sent by `ChatDetailScreen` when it mounts.
+
+The inbox isn't `ChatDetailScreen`. A user sitting on the inbox hasn't joined any room. So `activeConversations.get(conversationId)` returns `undefined`, the function bails at the first guard, and the typing event goes nowhere.
+
+No error. No log. The event was broadcast — from the server's perspective, "broadcast" means "call `notifyUser` for each member", and calling it for zero members is a valid no-op.
+
+The fix is to stop relying on the room cache as the source of truth:
+
+```js
+const recipientIds = new Set();
+
+const participantIds = await dmModel.getConversationParticipantIds(conversationId);
+for (const pid of participantIds) {
+  if (pid != null) recipientIds.add(Number(pid));
+}
+
+const members = activeConversations.get(conversationId);
+if (members) {
+  for (const m of members) recipientIds.add(Number(m));
+}
+
+for (const recipientId of recipientIds) {
+  if (recipientId === typistId) continue;
+  notifyUser(recipientId, payload);
+}
+```
+
+Now the function delivers to the conversation's actual participants, regardless of who's currently sitting inside the chat room. The room cache becomes an optimization, not a requirement.
+
+## The pattern
+
+Looking back, they're all the same bug.
+
+Bug 1: the value was `0`, the code expected `false`.
+
+Bug 2: the value was `undefined`, the translation layer turned it into `false`.
+
+Bug 3: the value was `"42"`, the guard wanted `42`.
+
+Bug 4: the value was a room, the code assumed it contained everyone who mattered.
+
+Each layer was internally consistent. The server sent `0` because MySQL stores booleans as tinyints. The client checked `typeof === 'number'` because the feed path delivers numbers. The broadcast consulted the room cache because for the chat screen, the room cache is exactly right.
+
+The bugs lived in the seams between layers. And at every seam, the layer downstream has to guess what the layer upstream meant.
+
+## The two fix patterns
+
+Almost every fix today fell into one of two buckets.
+
+**Make the boundary explicit.** For the email flag, that meant a normalizer that reads every possible field name and preserves `undefined`. For the search counts, that meant a normalizer that coerces every possible alias to a number. Both functions live at the top of a file with a comment explaining why they exist. They're verbose. They're also the only reason the app doesn't silently misclassify users every time the backend changes shape.
+
+**Stop guessing from a cache.** For the typing broadcast, that meant querying the actual participants instead of trusting a room map that only some screens populate. The room map is fast. It's also incomplete. When a fast source of truth can be wrong, it isn't a source of truth.
+
+Neither of these is clever. Both of them are the difference between a value that crosses a boundary intact and one that arrives in the right shape but the wrong meaning.
+
+## What I'd do differently
+
+**Coerce at the boundary, once.** Every value that crosses from HTTP into the app should pass through a normalizer. Not "usually" — always. The bug in Bug 2 wasn't that the API sent the wrong thing. It was that `AuthContext` tried to guess what the API meant without a normalizer, and `!!` was the wrong guess.
+
+**Type what you actually get.** The `PostCard` typing `likeCount?: number` was correct. The search endpoint returning a string was correct for its own SQL. The two truths collided. If the search endpoint's response type had been `likeCount?: string | number`, someone would have written a coercion the first day.
+
+**Never trust a cache that isn't the source of truth.** If a map holds "who's interested in this conversation," and the map is populated by an unrelated screen, the map is stale by construction. Query the thing you actually want to know.
+
+**Prefer exhaustive aliases to a single field name.** Reading `emailVerified ?? email_verified ?? isEmailVerified ?? is_email_verified` looks paranoid until the third time the backend changes serialization. Then it looks like the only reason anything still works.
+
+## The trade
+
+Every fix today made the code more verbose. The email flag became a five-line function instead of a `!!` cast. The search result normalizer grew from one line to thirty. The typing broadcast went from four lines to twelve.
+
+The trade I keep making and keep relearning: verbosity at the seam is cheaper than ambiguity at the seam. Ten lines of coercion against one silent misclassification. Twelve lines of recipient lookup against one event that never arrives.
+
+The alternative is a codebase where every value is right in its own layer and wrong everywhere else, and where "200 OK" means "the server did something" and not "the thing you asked for happened."
+
+I'll take the lines.
