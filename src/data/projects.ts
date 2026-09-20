@@ -26,12 +26,12 @@ export const projects: Project[] = [
     slug: "circlenet",
     title: "CircleNet",
     description:
-      "A social platform with feeds, groups, anonymous messages and live streaming — built three separate times against the same Express + MySQL backend.",
+      "A social platform with feeds, groups, anonymous messages and live streaming, built three separate times against the same Express and MySQL backend.",
     screenshots: [
       {
         src: "/projects/circlenet-mobile.jpg",
         alt: "CircleNet mobile app showing the global feed with posts, likes and reposts",
-        caption: "React Native client — global feed",
+        caption: "React Native client, global feed",
       },
     ],
     features: [
@@ -48,7 +48,7 @@ export const projects: Project[] = [
       {
         name: "Whispers",
         detail:
-          "Anonymous messages. The sender's identity is stripped server-side before the response is sent, so it's never exposed to the client — and anonymous content still goes through moderation.",
+          "Anonymous messages. The sender's identity is never recorded, so it can't be leaked by a bad query or a new endpoint.",
       },
       {
         name: "Live",
@@ -62,9 +62,9 @@ export const projects: Project[] = [
       },
     ],
     body: [
-      "CircleNet started as a vanilla JavaScript app to understand how a social feed actually works without a framework doing the heavy lifting. Once the core was solid, I rebuilt the same product in Next.js and again in React Native — three clients, one backend.",
+      "CircleNet started as a vanilla JavaScript app to understand how a social feed actually works without a framework doing the heavy lifting. Once the core was solid, I rebuilt the same product in Next.js and again in React Native: three clients, one backend.",
       "Sharing a single Express and MySQL API across all three forced me to design it properly. Each client needed the same shape of data, so I couldn't let any one of them invent its own. That constraint is the main reason the project taught me more than three unrelated apps would have.",
-      "Whispers and Live were the hardest parts. Anonymity has to be enforced on the server, not hidden in the UI — if the sender's ID is anywhere in the response, the feature is broken. And live streaming meant dealing with media in real time, which is a different kind of problem from anything else in the app.",
+      "Whispers and Live were the hardest parts. Anonymity has to be structural, not a display setting, and live streaming meant dealing with media in real time. Both are a different kind of problem from anything else in the app.",
     ],
     tags: [
       "Next.js",
@@ -95,19 +95,19 @@ export const projects: Project[] = [
     slug: "fixlog",
     title: "FixLog",
     description:
-      "A repair log for the phones I fix — devices, faults, parts and turnaround. I use it daily.",
+      "A repair log for the phones I fix. Devices, faults, parts and turnaround. I use it daily.",
     screenshots: [
       {
         src: "/projects/fixlog.jpg",
         alt: "FixLog showing a list of completed phone repairs with device, fault, fix and price",
-        caption: "The repair list — device, fault, fix and amount for each job",
+        caption: "The repair list: device, fault, fix and amount for each job",
       },
     ],
     features: [
       {
         name: "Repair log",
         detail:
-          "Every job in one list — device, reported fault, what the fix was, and what it cost. Newest first.",
+          "Every job in one list: device, reported fault, what the fix was, and what it cost. Newest first.",
       },
       {
         name: "Status tracking",
@@ -129,6 +129,59 @@ export const projects: Project[] = [
     links: [
       { label: "Source", href: "https://github.com/Sizasutfu/Fixlog" },
     ],
+    featured: true,
+  },
+  {
+    slug: "musicplayer",
+    title: "MusicPlayer",
+    description:
+      "A local-first music player for Android and iOS. Reads what's already on your device. No account, no streaming, no network.",
+    features: [
+      {
+        name: "Library scanning",
+        detail:
+          "Reads every audio file on the device through expo-media-library and sorts by title, artist or album.",
+      },
+      {
+        name: "ID3 metadata with caching",
+        detail:
+          "Extracts tags using @missingcore/audio-metadata and caches them on disk. The first scan is slow; every launch after that is instant.",
+      },
+      {
+        name: "Albums, artists and playlists",
+        detail:
+          "Each collection has its own detail view. Long-press a track to add it to a playlist, or create a new one inline.",
+      },
+      {
+        name: "Background playback",
+        detail:
+          "react-native-track-player keeps audio running when the app is backgrounded, with lock screen controls.",
+      },
+      {
+        name: "Gesture-driven player",
+        detail:
+          "Full-screen player with a reanimated seek bar. Drag anywhere on the bar, no tap targets to hit.",
+      },
+      {
+        name: "Theming",
+        detail:
+          "Follows the system setting by default, with manual light and dark overrides.",
+      },
+    ],
+    body: [
+      "I have music on my phone that I actually own, and none of the mainstream players handle that well anymore. They want a subscription, or an account, or they bury local files under layers of streaming UI.",
+      "This one does a single thing: it reads what's on the device and plays it. No account, no network, no recommendations. Just a library, sorted the way you want, with playlists and background playback.",
+      "The library scan is the part that had to be fast. Reading ID3 tags from every file on the device takes time on the first run, so metadata is cached to disk after that first pass. Every launch after that opens instantly.",
+    ],
+    tags: [
+      "React Native",
+      "Expo",
+      "TypeScript",
+      "react-native-track-player",
+      "Expo Router",
+    ],
+    year: "2026",
+    links: [],
     featured: true,
   },
 ];
