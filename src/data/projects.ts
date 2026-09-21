@@ -29,7 +29,7 @@ export const projects: Project[] = [
       "A social platform with feeds, groups, anonymous messages and live streaming, built three separate times against the same Express and MySQL backend.",
     screenshots: [
       {
-        src: "/projects/circlenet-mobile.jpg",
+        src: "/projects/circle.jpg",
         alt: "CircleNet mobile app showing the global feed with posts, likes and reposts",
         caption: "React Native client, global feed",
       },
