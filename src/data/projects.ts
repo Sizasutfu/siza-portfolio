@@ -136,6 +136,13 @@ export const projects: Project[] = [
     title: "MusicPlayer",
     description:
       "A local-first music player for Android and iOS. Reads what's already on your device. No account, no streaming, no network.",
+      screenshots: [
+      {
+        src: "/projects/musicplayer.jpg",
+        alt: "musicplayer showing a list of local music",
+        caption: "MusicPlayer home screen",
+      },
+    ],
     features: [
       {
         name: "Library scanning",
@@ -181,7 +188,7 @@ export const projects: Project[] = [
       "Expo Router",
     ],
     year: "2026",
-    links: [],
+    links: [  { label: "Source", href: "https://github.com/Sizasutfu/musicplayer" },],
     featured: true,
   },
 ];
