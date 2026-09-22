@@ -1,0 +1,155 @@
+---
+title: "React Native tells you something's wrong. It rarely tells you what."
+date: "2026-09-22"
+summary: "Five bugs from one migration session. Every error was accurate. None of them pointed at the actual problem."
+tags: ["React Native", "Expo", "Debugging", "Metro"]
+---
+
+Today I migrated a music player from a drawer-only navigation to a drawer with nested bottom tabs. It should have been an hour. It took most of a day, and every bug I hit had the same shape: the error message was correct and pointed at the wrong thing.
+
+## The shape of the symptom
+
+All five bugs looked identical from outside. The app opened, some part of the UI was wrong or missing, and the console had something to say about it. Nothing was silent. That was the problem.
+
+The error messages were accurate. They described real problems. They just described them from a vantage point that made them useless. React Native's stack traces point at the nearest file that broke, not the file that caused the break. When your navigation tree is five layers deep, "nearest" and "cause" are often three files apart.
+
+## Bug 1: the error that named the wrong file
+
+I finished the drawer migration and the app wouldn't boot:
+
+```text
+ERROR [Error: useTheme must be used inside <ThemeProvider>]
+Call Stack
+  useTheme (context/ThemeContext.tsx)
+  DrawerLayout (app\_layout.tsx)
+```
+
+The stack trace says `DrawerLayout (app\_layout.tsx)`. That reads as: your root layout file is exporting a `DrawerLayout` that calls `useTheme()`, and there's no `ThemeProvider` above it.
+
+Which is exactly what was wrong. `app/_layout.tsx` should export `RootLayout` and wrap the tree in `<ThemeProvider>`. Instead it was exporting `DrawerLayout` — the drawer code had been pasted into the root file at some point during the migration.
+
+The trace was correct. It just took me fifteen minutes to accept that the file it named was the file I should look at, because my instinct was to look at `DrawerLayout` in `app/(drawer)/_layout.tsx` — the file it was supposed to be in — and check that one first.
+
+The check that settled it was one command:
+
+```powershell
+Get-Content app\_layout.tsx | Select-String "export default function"
+# export default function DrawerLayout() {
+```
+
+One line of output. The file was wrong and the error told me so. I just didn't believe it.
+
+## Bug 2: the header that appeared twice, then not at all
+
+The migration created a nested navigator structure:
+
+```text
+Stack (headerShown: false)
+  └── Drawer (headerShown: true)
+        └── (tabs) — headerShown: false
+              └── Tabs — headerShown: false
+```
+
+Two `headerShown: false` in a row. The drawer was suppressing its own header for the `(tabs)` screen, and the tabs navigator was suppressing its header too. Result: no header anywhere on the tab screens.
+
+Nothing errored. Nothing warned. The screen rendered. It just had no header, and no way to open the drawer.
+
+The fix was to give the `Tabs` layout its own header with the toggle button. But the bug itself has no error message. You have to notice the absence of something, which is harder than noticing something broken.
+
+I only found it because I was looking for the menu button and couldn't find it. If I'd been testing colors that day, I might have shipped it.
+
+## Bug 3: the paste that doubled
+
+I pasted an updated version of a screen into VSCode. The file was already 500 lines. After the paste it was 1000. TypeScript reported 40 errors, all of the form:
+
+```text
+Duplicate identifier 'React'.
+Duplicate identifier 'View'.
+Duplicate identifier 'useState'.
+```
+
+Every one was technically correct. None of them said "you pasted the file twice." Because TypeScript doesn't know that. It sees two `import React` statements and reports the second one. That's what a compiler does.
+
+The fix was four keystrokes — `Ctrl+G`, `530`, `Ctrl+Shift+End`, `Delete` — but only after I'd skimmed the error list twice looking for an actual problem. The errors were so uniform they looked like a config issue. They weren't. They were a paste issue.
+
+I keep hitting this class of thing with editors. The tool that's supposed to help me fix mistakes doesn't know I made a mistake. It just knows the code doesn't parse.
+
+## Bug 4: the warning that belongs to someone else
+
+Every time the app loaded, Metro printed:
+
+```text
+WARN Method getInfoAsync imported from "expo-file-system" is deprecated.
+```
+
+I hadn't imported `getInfoAsync`. My code was clean. The warning was coming from `@missingcore/audio-metadata` — a dependency that reads ID3 tags and hasn't updated to the new `expo-file-system` API yet.
+
+I tried three fixes before the real one.
+
+**Attempt 1:** `LogBox.ignoreLogs` in the root layout. Silenced the warning on the device. Did nothing to the terminal. Metro's log relay doesn't consult LogBox.
+
+**Attempt 2:** a `metro.config.js` that patched `console.warn`. Useless — the warning fires inside the app runtime, not the bundler. The config ran in Node. The warning came from the device.
+
+**Attempt 3:** patched the dependency. Changed one line in `node_modules`:
+
+```diff
+- ExpoFileSystem = require('expo-file-system');
++ ExpoFileSystem = require('expo-file-system/legacy');
+```
+
+Then `npx patch-package @missingcore/audio-metadata` and the warning was gone.
+
+The lesson: not every warning is yours to fix, but every warning is yours to silence. And the two obvious ways to silence a warning — LogBox and metro.config — handle different layers, neither of which is where this one lived.
+
+## Bug 5: the patch that worked locally
+
+The track player library has a Kotlin compatibility bug with SDK 54. Four methods in `MusicModule.kt` pass a nullable `Bundle` where Kotlin 2.1.20 requires non-null. I patched the file, generated a patch with `patch-package`, and rebuilt.
+
+The build failed. Same Kotlin error, same line numbers.
+
+I checked the patch file. It had two of the four fixes. `patch-package` had compared my edited file against a version it remembered from a previous run — one that already included two of the fixes. So it only captured the diff between "partially patched" and "fully patched," and the two earlier edits vanished.
+
+I had to:
+
+```powershell
+Remove-Item -Recurse -Force node_modules\react-native-track-player
+npm install
+# re-apply all four edits
+npx patch-package react-native-track-player
+```
+
+The patch file then had all four changes and the build passed. But it took two failed EAS builds to notice, because the build log pointed at the Kotlin file inside `node_modules` — which was correctly patched on my machine. The build was running against a different copy.
+
+Which is the second lesson: `patch-package` is only as good as what's committed. EAS uploads your git tree, not your working directory. If the patch file isn't tracked, the build server doesn't have it, and the error message points at the file, not the reason.
+
+## What I actually learned
+
+Every bug today was correctly reported. That's the part that stings.
+
+The compiler told me `React` was declared twice. It was. It didn't tell me the file was pasted twice, because it can't know that. The stack trace told me `useTheme` was called outside `<ThemeProvider>`. It was. It didn't tell me the file was named wrong, because it doesn't know what "wrong" means for my project.
+
+A tool that reports the state of the code is not a tool that reports the state of the work. React Native is excellent at the first and silent on the second.
+
+## The three patterns
+
+Looking back at the day, the bugs cluster.
+
+**Errors point at the nearest break, not the cause.** Bugs 1 and 3. The stack trace names the file that failed, which is often one or two files downstream of the actual mistake. When you see an error, ask what would have to be true upstream for this to be the symptom.
+
+**Absences don't error.** Bug 2. A missing header, a missing button, a screen that renders but is empty — these are valid states to the framework. Nothing throws. You have to notice the absence, which is a different skill than reading an error.
+
+**Layer mismatches.** Bugs 4 and 5. The warning came from one process (the device) and I was trying to silence it in another (the bundler). The patch was correct on my machine and missing on the build server. Both times the fix required knowing which layer was talking.
+
+None of these are hard problems. All of them are hard to see, and all of them get worse as the project grows more layers.
+
+## What I'd do differently
+
+**Read the error literally.** The `useTheme` error said `app\_layout.tsx` in the stack trace. I spent fifteen minutes checking the file I expected the problem to be in, not the file the trace named. The trace was right.
+
+**When something is missing, look at what's above it.** No header on a tab screen? The chain of navigators above it is where the answer is. No menu button? Same. Absences are almost always inherited.
+
+**Commit before you build.** The patch-package failure was entirely preventable. `git status` before every EAS build would have caught it. I now run it every time, even when I think I haven't changed anything.
+
+The three minutes this adds to a build cycle is cheaper than the ten it costs to diagnose a Kotlin error that only exists on the server.
+
+That's today. Nothing dramatic, no clever fix. Just five bugs that all looked the same from the outside, and the slow realization that they were all the same shape on the inside too: the tooling was answering a different question than the one I was asking.
