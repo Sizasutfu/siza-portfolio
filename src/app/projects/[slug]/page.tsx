@@ -17,9 +17,35 @@ export async function generateMetadata({
   const project = projects.find((p) => p.slug === slug);
   if (!project) return {};
 
+  const url = `/projects/${project.slug}`;
+  const ogImage = `/projects/${project.slug}-og.png`;
+
   return {
     title: project.title,
     description: project.description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      title: project.title,
+      description: project.description,
+      url,
+      type: "website",
+      images: [
+        {
+          url: ogImage,
+          width: 1200,
+          height: 630,
+          alt: project.title,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: project.title,
+      description: project.description,
+      images: [ogImage],
+    },
   };
 }
 

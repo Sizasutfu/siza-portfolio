@@ -135,12 +135,12 @@ export const projects: Project[] = [
     slug: "musicplayer",
     title: "MusicPlayer",
     description:
-      "A local-first music player for Android and iOS. Reads what's already on your device. No account, no streaming, no network.",
-      screenshots: [
+      "A local-first music player for Android. Reads what's already on your device. No account, no streaming, no network.",
+    screenshots: [
       {
         src: "/projects/musicplayer.jpg",
-        alt: "musicplayer showing a list of local music",
-        caption: "MusicPlayer home screen",
+        alt: "MusicPlayer showing the library screen with a list of local songs",
+        caption: "Library with sort and search",
       },
     ],
     features: [
@@ -162,17 +162,17 @@ export const projects: Project[] = [
       {
         name: "Background playback",
         detail:
-          "react-native-track-player keeps audio running when the app is backgrounded, with lock screen controls.",
+          "expo-audio keeps audio running while the app is backgrounded, with lock screen metadata and play/pause controls.",
       },
       {
-        name: "Gesture-driven player",
+        name: "Animated waveform",
         detail:
-          "Full-screen player with a reanimated seek bar. Drag anywhere on the bar, no tap targets to hit.",
+          "A spectrum visualizer sits over the album art in the full player, driven by Reanimated and the real playback state.",
       },
       {
-        name: "Theming",
+        name: "Light and dark themes",
         detail:
-          "Follows the system setting by default, with manual light and dark overrides.",
+          "Follows the system setting by default, with manual overrides. The two themes use different spacing, typography weights and surface treatments, not just inverted colors.",
       },
     ],
     body: [
@@ -180,15 +180,18 @@ export const projects: Project[] = [
       "This one does a single thing: it reads what's on the device and plays it. No account, no network, no recommendations. Just a library, sorted the way you want, with playlists and background playback.",
       "The library scan is the part that had to be fast. Reading ID3 tags from every file on the device takes time on the first run, so metadata is cached to disk after that first pass. Every launch after that opens instantly.",
     ],
-    tags: [
-      "React Native",
-      "Expo",
-      "TypeScript",
-      "react-native-track-player",
-      "Expo Router",
-    ],
+    tags: ["React Native", "Expo", "TypeScript", "expo-audio", "Expo Router"],
     year: "2026",
-    links: [  { label: "Source", href: "https://github.com/Sizasutfu/musicplayer" },],
+    links: [
+      {
+        label: "Download APK",
+        href: "https://github.com/Sizasutfu/musicplayer-releases/releases/latest",
+      },
+      {
+        label: "Source",
+        href: "https://github.com/Sizasutfu/musicplayer",
+      },
+    ],
     featured: true,
   },
 ];
